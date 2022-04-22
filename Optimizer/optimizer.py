@@ -1,13 +1,12 @@
 import random
-from Grouping import benchmark, util
+from benchmark import benchmark
+from util import help
 import copy
+import numpy as np
 
 
 def local_search(current_best_obj, base_fitness, Population, func, matrix, current_iter, Max_iter_search,
-                 Max_iter_overlap, overlap_ignore_rate, delta, epsilon):
-
-    start_connections = util.matrix_connection(matrix)
-    start_groups = util.connections_groups(start_connections)
+                 Max_iter_overlap, overlap_ignore_rate, delta, epsilon, cost):
 
     # set the neighbor size adaptive
     neighbor_size = define_neighbors(len(matrix), current_iter, Max_iter_search)
@@ -17,82 +16,79 @@ def local_search(current_best_obj, base_fitness, Population, func, matrix, curre
 
     # generate the search points and its neighbors
     search_points, search_neighbors = search_point_neighbor_generate(matrix, search_points_size, neighbor_size)
-
     # generate the candidate solution
     matrix_solution = solution_generate(matrix, search_points, search_neighbors)
-    if current_iter % 5 == 0:
-        util.draw_heatmap(matrix_solution, "YlGnBu", 'Solution candidate in ' + str(current_iter+1) + ' G')
 
-    connections_solution = util.matrix_connection(matrix_solution)
-    groups_solution = util.connections_groups(connections_solution)
+    # if current_iter % 5 == 0:
+    #     help.draw_heatmap(matrix_solution, "YlGnBu", 'Solution candidate in ' + str(current_iter + 1) + ' G')
 
-    frequency = util.calculate_frequency(matrix_solution)
-    center_vars = util.overlap_center(frequency)
+    connections_solution = help.matrix_connection(matrix_solution)
+    groups_solution = help.connections_groups(connections_solution)
+
+    frequency = help.calculate_frequency(matrix_solution)
+    center_vars = help.overlap_center(frequency)
 
     '''
     Solve overlap problems after new solution generate by LS
     '''
-    # Solving the overlap problems
     for center_var in center_vars:
         # matrix is changed in every iteration
-        temp_frequency = util.calculate_frequency(matrix_solution)
-        temp_center_vars = util.overlap_center(temp_frequency)
+        temp_frequency = help.calculate_frequency(matrix_solution)
+        temp_center_vars = help.overlap_center(temp_frequency)
         if center_var not in temp_center_vars:
             continue
 
-        overlap_cut_matrix_solution, update_obj = overlap_solve(base_fitness, current_best_obj, center_var, Population,
-                                                                func, matrix_solution, epsilon, Max_iter_overlap, delta,
-                                                                overlap_ignore_rate)
-
-        if update_obj < current_best_obj or (len(groups_solution) > len(start_groups) and update_obj == current_best_obj):
+        overlap_cut_matrix_solution, update_obj, cost = overlap_solve(base_fitness, current_best_obj, center_var,
+                                                                      Population, func, matrix_solution, epsilon,
+                                                                      Max_iter_overlap, delta, overlap_ignore_rate,
+                                                                      cost)
+        overlap_cut_connection_solution = help.matrix_connection(overlap_cut_matrix_solution)
+        if update_obj < current_best_obj or (len(groups_solution) > len(overlap_cut_connection_solution) and update_obj == current_best_obj):
             matrix = copy.deepcopy(overlap_cut_matrix_solution)
             current_best_obj = update_obj
     if current_iter % 5 == 0:
-        util.draw_heatmap(matrix, "YlGnBu", 'Current best solution in ' + str(current_iter+1) + ' G')
-    return matrix, current_best_obj
+        help.draw_heatmap(matrix, "YlGnBu", 'Current best solution in ' + str(current_iter + 1) + ' G')
+    return matrix, current_best_obj, cost
 
 
 # random cut the connection for the center variable in overlap function
-def overlap_solve(base_fitness, current_best_obj, center_var, Population, func, matrix, epsilon, iteration, delta, rate):
+def overlap_solve(base_fitness, current_best_obj, center_var, Population, func, matrix, epsilon, iteration, delta, rate,
+                  cost):
     # overlap_connection save the double element pair
     # overlap_group save the merged element group
     overlap_connection = []
     overlap_group = [center_var]
-
     for j in range(len(matrix[0])):
         if matrix[center_var][j] == 1:
             overlap_connection.append([center_var, j])
             overlap_group.append(j)
+
     matrix_copy = copy.deepcopy(matrix)
-    groups = util.connections_groups(util.matrix_connection(matrix))
+    groups = help.connections_groups(help.matrix_connection(matrix))
     pure_groups = []
     for group in groups:
         if center_var not in group:
             pure_groups.append(group)
-
+    rest_fitness, cost = benchmark.groups_fitness(pure_groups, Population, func, cost)
     # random ignore the connection with certain rate
     for i in range(iteration):
 
         # merge the sample like [[1, 2], [2, 3], [4]] to [[1, 2, 3], [4]]
         # new_connection saves like [[1, 2], [2, 3], [4]]
         # new_groups saves like [[1, 2, 3], [4]]
-        new_connection = util.overlap_cut(center_var, overlap_connection, rate)
-        new_groups = util.connections_groups(new_connection)
-        copy_pure_groups = copy.deepcopy(pure_groups)
-        copy_pure_groups.extend(new_groups)
-        new_fitness = benchmark.groups_fitness(copy_pure_groups, Population, func)
-        opt_obj = benchmark.object_function(base_fitness, new_fitness, delta, epsilon) + benchmark.penalty(
-            len(new_groups) + len(groups) - 1, epsilon)
-
+        new_connection = help.overlap_cut(center_var, overlap_connection, rate)
+        new_groups = help.connections_groups(new_connection)
+        new_part_fitness, cost = benchmark.groups_fitness(new_groups, Population, func, cost)
+        new_part_obj = benchmark.object_function(base_fitness, np.sum([new_part_fitness, rest_fitness], axis=0), delta, epsilon) + benchmark.penalty(len(pure_groups) + len(new_groups) - 1, epsilon)
         # update
-        if opt_obj <= current_best_obj:
-            current_best_obj = opt_obj
+        if new_part_obj <= current_best_obj:
+            current_best_obj = new_part_obj
             matrix_copy = copy.deepcopy(matrix)
             for conn in new_connection:
                 if len(conn) < 2:
                     matrix_copy[center_var][conn[0]] = 0
                     matrix_copy[conn[0]][center_var] = 0
-    return matrix_copy, current_best_obj
+    return matrix_copy, current_best_obj, cost
 
 
 def define_neighbors(N, cur_iter, Max_iter):
