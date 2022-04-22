@@ -1,5 +1,5 @@
-from Grouping import Proposal
-from cec2013lsgo.cec2013 import Benchmark
+from Grouping import Proposal, Comparison
+from DE import DE
 
 
 def ADD(vector):
@@ -14,10 +14,12 @@ def none_separable(vector):
 
 
 if __name__ == '__main__':
+
+    N = 5
+
     '''
-    Parameter initialization
+    Decomposition method parameter initialization
     '''
-    N = 50
     pop_size = 5
     Max_iter_overlap = 3
     Max_iter_search = 50
@@ -26,9 +28,14 @@ if __name__ == '__main__':
     cost = 0
 
     '''
+    DE parameter initialization
+    '''
+    NIND = 5
+    Max_iter_DE = 10
+    '''
     Benchmark initialization
     '''
-    func = none_separable
+    func = ADD
     scale_range = [-10, 10]
     # func_num = 1
     # bench = Benchmark()
@@ -36,8 +43,11 @@ if __name__ == '__main__':
     # func = bench.get_function(func_num)
     # scale_range = [func_info['lower'], func_info['upper']]
 
-    FDMVM, cost = Proposal.graphFDMVM(N, func, pop_size, Max_iter_overlap, Max_iter_search, epsilon, overlap_ignore_rate
-                                      , scale_range, cost)
+    # FDMVM, cost = Proposal.graphFDMVM(N, func, pop_size, Max_iter_overlap, Max_iter_search, epsilon, overlap_ignore_rate
+    #                                   , scale_range, cost)
 
+    FDMVM = Comparison.CCDE(N)
+    var_traces, obj_traces = DE.CC(N, NIND, Max_iter_DE, func, scale_range, FDMVM)
+    print(obj_traces)
 
 

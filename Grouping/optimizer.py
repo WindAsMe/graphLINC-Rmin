@@ -1,6 +1,6 @@
 import random
 from benchmark import benchmark
-from util import help
+from util import help_Proposal
 import copy
 import numpy as np
 
@@ -20,21 +20,21 @@ def local_search(current_best_obj, base_fitness, Population, func, matrix, curre
     matrix_solution = solution_generate(matrix, search_points, search_neighbors)
 
     # if current_iter % 5 == 0:
-    #     help.draw_heatmap(matrix_solution, "YlGnBu", 'Solution candidate in ' + str(current_iter + 1) + ' G')
+    #     help_Proposal.draw_heatmap(matrix_solution, "YlGnBu", 'Solution candidate in ' + str(current_iter + 1) + ' G')
 
-    connections_solution = help.matrix_connection(matrix_solution)
-    groups_solution = help.connections_groups(connections_solution)
+    connections_solution = help_Proposal.matrix_connection(matrix_solution)
+    groups_solution = help_Proposal.connections_groups(connections_solution)
 
-    frequency = help.calculate_frequency(matrix_solution)
-    center_vars = help.overlap_center(frequency)
+    frequency = help_Proposal.calculate_frequency(matrix_solution)
+    center_vars = help_Proposal.overlap_center(frequency)
 
     '''
     Solve overlap problems after new solution generate by LS
     '''
     for center_var in center_vars:
         # matrix is changed in every iteration
-        temp_frequency = help.calculate_frequency(matrix_solution)
-        temp_center_vars = help.overlap_center(temp_frequency)
+        temp_frequency = help_Proposal.calculate_frequency(matrix_solution)
+        temp_center_vars = help_Proposal.overlap_center(temp_frequency)
         if center_var not in temp_center_vars:
             continue
 
@@ -42,12 +42,12 @@ def local_search(current_best_obj, base_fitness, Population, func, matrix, curre
                                                                       Population, func, matrix_solution, epsilon,
                                                                       Max_iter_overlap, delta, overlap_ignore_rate,
                                                                       cost)
-        overlap_cut_connection_solution = help.matrix_connection(overlap_cut_matrix_solution)
+        overlap_cut_connection_solution = help_Proposal.matrix_connection(overlap_cut_matrix_solution)
         if update_obj < current_best_obj or (len(groups_solution) > len(overlap_cut_connection_solution) and update_obj == current_best_obj):
             matrix = copy.deepcopy(overlap_cut_matrix_solution)
             current_best_obj = update_obj
     if current_iter % 5 == 0:
-        help.draw_heatmap(matrix, "YlGnBu", 'Current best solution in ' + str(current_iter + 1) + ' G')
+        help_Proposal.draw_heatmap(matrix, "YlGnBu", 'Current best solution in ' + str(current_iter + 1) + ' G')
     return matrix, current_best_obj, cost
 
 
@@ -64,7 +64,7 @@ def overlap_solve(base_fitness, current_best_obj, center_var, Population, func, 
             overlap_group.append(j)
 
     matrix_copy = copy.deepcopy(matrix)
-    groups = help.connections_groups(help.matrix_connection(matrix))
+    groups = help_Proposal.connections_groups(help_Proposal.matrix_connection(matrix))
     pure_groups = []
     for group in groups:
         if center_var not in group:
@@ -76,8 +76,8 @@ def overlap_solve(base_fitness, current_best_obj, center_var, Population, func, 
         # merge the sample like [[1, 2], [2, 3], [4]] to [[1, 2, 3], [4]]
         # new_connection saves like [[1, 2], [2, 3], [4]]
         # new_groups saves like [[1, 2, 3], [4]]
-        new_connection = help.overlap_cut(center_var, overlap_connection, rate)
-        new_groups = help.connections_groups(new_connection)
+        new_connection = help_Proposal.overlap_cut(center_var, overlap_connection, rate)
+        new_groups = help_Proposal.connections_groups(new_connection)
         new_part_fitness, cost = benchmark.groups_fitness(new_groups, Population, func, cost)
         new_part_obj = benchmark.object_function(base_fitness, np.sum([new_part_fitness, rest_fitness], axis=0), delta, epsilon) + benchmark.penalty(len(pure_groups) + len(new_groups) - 1, epsilon)
         # update
