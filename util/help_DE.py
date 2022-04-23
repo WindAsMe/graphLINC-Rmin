@@ -1,5 +1,6 @@
 import geatpy as ea
 from DE import MyProblem
+import copy
 
 
 def initial_population(Dim, NIND, func, groups, scale_range):
@@ -12,7 +13,8 @@ def initial_population(Dim, NIND, func, groups, scale_range):
         Field = ea.crtfld(Encoding, problem.varTypes, problem.ranges, problem.borders)
         population = ea.Population(Encoding, Field, NIND)
         population.initChrom(NIND * len(group))
-        population.Phen = population.Chrom
+        population.Phen = copy.deepcopy(population.Chrom)
+
         problem.aimFunc(population)
         initial_Population.append(population)
     return initial_Population

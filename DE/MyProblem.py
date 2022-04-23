@@ -23,11 +23,10 @@ class CC_Problem(ea.Problem):
         temp_Phen = []
         for i in range(len(pop.Chrom)):
             temp_Phen.append(self.based_population)
-        temp_Phen = np.array(temp_Phen)
+        temp_Phen = np.array(temp_Phen, dtype='float64')
 
         for element in self.group:
             temp_Phen[:, element] = pop.Phen[:, self.group.index(element)]
-
         result = []
         for p in temp_Phen:
             result.append([self.benchmark(p)])

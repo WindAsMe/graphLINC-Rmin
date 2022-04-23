@@ -25,7 +25,7 @@ if __name__ == '__main__':
     DE parameter initialization
     '''
     NIND = 30
-    Max_iter_DE = 50
+    EFs = 3000000
     '''
     Benchmark initialization
     '''
@@ -35,15 +35,16 @@ if __name__ == '__main__':
     func = bench.get_function(func_num)
     scale_range = [func_info['lower'], func_info['upper']]
 
-    groups = Comparison.CCDE(N)
     Population = random_Population(scale_range, N, pop_size)
     intercept = func(np.zeros(N))
 
     base_fitness = benchmark.base_fitness(Population, func, intercept)
-    fitness, cost = benchmark.groups_fitness(groups, Population, func, cost, intercept)
 
-    # FDMVM, cost = Proposal.graphFDMVM(N, func, pop_size, Max_iter_overlap, Max_iter_search, epsilon, overlap_ignore_rate
-    #                                   , scale_range, cost, intercept)
-    # print(FDMVM)
-    # var_traces, obj_traces = DE.CC(N, NIND, Max_iter_DE, func, scale_range, FDMVM)
-    # print(obj_traces)
+    FDMVM, cost = Proposal.graphFDMVM(N, func, pop_size, Max_iter_overlap, Max_iter_search, overlap_ignore_rate,
+                                      scale_range, cost, intercept)
+    print('Decomposition cost: ', cost)
+    # DE max iteration update
+    Max_iter_DE = int((EFs - cost) / 1000)
+
+    var_traces, obj_traces = DE.CC(N, NIND, Max_iter_DE, func, scale_range, FDMVM)
+    print(obj_traces)
