@@ -1,10 +1,10 @@
 import numpy as np
 
 
-def base_fitness(Population, func):
+def base_fitness(Population, func, intercept):
     fitness = []
     for indi in Population:
-        fitness.append(func(indi))
+        fitness.append(func(indi) - intercept)
     return fitness
 
 
@@ -15,26 +15,22 @@ def group_individual(group, individual):
     return part_individual
 
 
-def groups_fitness(groups, Population, func, cost):
+def groups_fitness(groups, Population, func, cost, intercept):
     fitness = []
     for indi in Population:
         indi_fitness = 0
         for group in groups:
-            indi_fitness += func(group_individual(group, indi))
+            indi_fitness += (func(group_individual(group, indi)) - intercept)
             cost += 1
         fitness.append(indi_fitness)
     return fitness, cost
 
 
 # outer interface
-# hybrid with penalty
 # opt_fitness is calculated by groups_fitness
-def object_function(base_fitness, opt_fitness, delta, epsilon=0.1):
+def object_function(base_fitness, opt_fitness):
     error = 0
     for i in range(len(base_fitness)):
-        error += ((base_fitness[i] - opt_fitness[i]) / delta) ** 2
-    return epsilon * error
+        error += ((base_fitness[i] - opt_fitness[i])) ** 2
+    return error
 
-
-def penalty(groups_size, epsilon=0.1):
-    return (1 - epsilon) / groups_size

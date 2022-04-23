@@ -6,7 +6,7 @@ import numpy as np
 
 
 def local_search(current_best_obj, base_fitness, Population, func, matrix, current_iter, Max_iter_search,
-                 Max_iter_overlap, overlap_ignore_rate, delta, epsilon, cost):
+                 Max_iter_overlap, overlap_ignore_rate, delta, epsilon, cost, intercept):
 
     # set the neighbor size adaptive
     neighbor_size = define_neighbors(len(matrix), current_iter, Max_iter_search)
@@ -15,14 +15,16 @@ def local_search(current_best_obj, base_fitness, Population, func, matrix, curre
     search_points_size = define_search_points(len(matrix), current_iter, Max_iter_search)
 
     # generate the search points and its neighbors
-    search_points, search_neighbors = search_point_neighbor_generate(matrix, search_points_size, neighbor_size)
+    search_points, search_neighbors = search_point_neighbor_generate(matrix, neighbor_size, search_points_size)
     # generate the candidate solution
+
     matrix_solution = solution_generate(matrix, search_points, search_neighbors)
 
     # if current_iter % 5 == 0:
     #     help_Proposal.draw_heatmap(matrix_solution, "YlGnBu", 'Solution candidate in ' + str(current_iter + 1) + ' G')
 
     connections_solution = help_Proposal.matrix_connection(matrix_solution)
+
     groups_solution = help_Proposal.connections_groups(connections_solution)
 
     frequency = help_Proposal.calculate_frequency(matrix_solution)
@@ -41,9 +43,10 @@ def local_search(current_best_obj, base_fitness, Population, func, matrix, curre
         overlap_cut_matrix_solution, update_obj, cost = overlap_solve(base_fitness, current_best_obj, center_var,
                                                                       Population, func, matrix_solution, epsilon,
                                                                       Max_iter_overlap, delta, overlap_ignore_rate,
-                                                                      cost)
+                                                                      cost, intercept)
         overlap_cut_connection_solution = help_Proposal.matrix_connection(overlap_cut_matrix_solution)
-        if update_obj < current_best_obj or (len(groups_solution) > len(overlap_cut_connection_solution) and update_obj == current_best_obj):
+        if update_obj < current_best_obj or (len(groups_solution) > len(overlap_cut_connection_solution) and update_obj
+                                             == current_best_obj):
             matrix = copy.deepcopy(overlap_cut_matrix_solution)
             current_best_obj = update_obj
     if current_iter % 5 == 0:
@@ -53,7 +56,7 @@ def local_search(current_best_obj, base_fitness, Population, func, matrix, curre
 
 # random cut the connection for the center variable in overlap function
 def overlap_solve(base_fitness, current_best_obj, center_var, Population, func, matrix, epsilon, iteration, delta, rate,
-                  cost):
+                  cost, intercept):
     # overlap_connection save the double element pair
     # overlap_group save the merged element group
     overlap_connection = []
@@ -69,7 +72,7 @@ def overlap_solve(base_fitness, current_best_obj, center_var, Population, func, 
     for group in groups:
         if center_var not in group:
             pure_groups.append(group)
-    rest_fitness, cost = benchmark.groups_fitness(pure_groups, Population, func, cost)
+    rest_fitness, cost = benchmark.groups_fitness(pure_groups, Population, func, cost, intercept)
     # random ignore the connection with certain rate
     for i in range(iteration):
 
@@ -78,8 +81,9 @@ def overlap_solve(base_fitness, current_best_obj, center_var, Population, func, 
         # new_groups saves like [[1, 2, 3], [4]]
         new_connection = help_Proposal.overlap_cut(center_var, overlap_connection, rate)
         new_groups = help_Proposal.connections_groups(new_connection)
-        new_part_fitness, cost = benchmark.groups_fitness(new_groups, Population, func, cost)
-        new_part_obj = benchmark.object_function(base_fitness, np.sum([new_part_fitness, rest_fitness], axis=0), delta, epsilon) + benchmark.penalty(len(pure_groups) + len(new_groups) - 1, epsilon)
+
+        new_part_fitness, cost = benchmark.groups_fitness(new_groups, Population, func, cost, intercept)
+        new_part_obj = benchmark.object_function(base_fitness, np.sum([new_part_fitness, rest_fitness], axis=0))
         # update
         if new_part_obj <= current_best_obj:
             current_best_obj = new_part_obj
@@ -92,12 +96,12 @@ def overlap_solve(base_fitness, current_best_obj, center_var, Population, func, 
 
 
 def define_neighbors(N, cur_iter, Max_iter):
-    return int(-N / (10 * Max_iter) * (cur_iter + 1) + N / 10) + 1
+    return int(-N / (50 * Max_iter) * (cur_iter + 1) + N / 50) + 1
     # return int((N/5)*(1 - 1 / (1 + np.exp(-0.5 * (cur_iter - Max_iter / 3))))+1)
 
 
 def define_search_points(N, cur_iter, Max_iter):
-    return int(-N / (10 * Max_iter) * (cur_iter + 1) + N / 10) + 1
+    return int(-N / (50 * Max_iter) * (cur_iter + 1) + N / 50) + 1
     # return int((N/5)*(1 - 1 / (1 + np.exp(-0.5 * (cur_iter - Max_iter / 3))))+1)
 
 

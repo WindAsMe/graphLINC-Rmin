@@ -1,21 +1,15 @@
+import numpy as np
+
 from Grouping import Proposal, Comparison
 from DE import DE
-
-
-def ADD(vector):
-    return sum(vector)
-
-
-def none_separable(vector):
-    result = 0
-    for i in range(0, len(vector)-1, 2):
-        result += vector[i]*vector[i+1]
-    return result
+from cec2013lsgo.cec2013 import Benchmark
+from benchmark import benchmark
+from util.help_Proposal import random_Population
 
 
 if __name__ == '__main__':
 
-    N = 5
+    N = 1000
 
     '''
     Decomposition method parameter initialization
@@ -23,31 +17,33 @@ if __name__ == '__main__':
     pop_size = 5
     Max_iter_overlap = 3
     Max_iter_search = 50
-    epsilon = 0.5
+    epsilon = 0.1
     overlap_ignore_rate = 0.5
     cost = 0
 
     '''
     DE parameter initialization
     '''
-    NIND = 5
-    Max_iter_DE = 10
+    NIND = 30
+    Max_iter_DE = 50
     '''
     Benchmark initialization
     '''
-    func = ADD
-    scale_range = [-10, 10]
-    # func_num = 1
-    # bench = Benchmark()
-    # func_info = bench.get_info(func_num)
-    # func = bench.get_function(func_num)
-    # scale_range = [func_info['lower'], func_info['upper']]
+    func_num = 1
+    bench = Benchmark()
+    func_info = bench.get_info(func_num)
+    func = bench.get_function(func_num)
+    scale_range = [func_info['lower'], func_info['upper']]
+
+    groups = Comparison.CCDE(N)
+    Population = random_Population(scale_range, N, pop_size)
+    intercept = func(np.zeros(N))
+
+    base_fitness = benchmark.base_fitness(Population, func, intercept)
+    fitness, cost = benchmark.groups_fitness(groups, Population, func, cost, intercept)
 
     # FDMVM, cost = Proposal.graphFDMVM(N, func, pop_size, Max_iter_overlap, Max_iter_search, epsilon, overlap_ignore_rate
-    #                                   , scale_range, cost)
-
-    FDMVM = Comparison.CCDE(N)
-    var_traces, obj_traces = DE.CC(N, NIND, Max_iter_DE, func, scale_range, FDMVM)
-    print(obj_traces)
-
-
+    #                                   , scale_range, cost, intercept)
+    # print(FDMVM)
+    # var_traces, obj_traces = DE.CC(N, NIND, Max_iter_DE, func, scale_range, FDMVM)
+    # print(obj_traces)
