@@ -1,18 +1,15 @@
-import random
-
-import numpy as np
-
 from benchmark import benchmark
 from util import help_Proposal
 from Grouping import optimizer
 
 
-def graphFDMVM(N, func, pop_size, Max_iter_overlap, Max_iter_search, epsilon, overlap_ignore_rate, scale_range, cost,
+def graphFDMVM(N, func, pop_size, Max_iter_overlap, Max_iter_search, overlap_ignore_rate, scale_range, cost,
                intercept):
 
     """
     Algorithm initialization
     """
+    stop_threshold = 0.1
     initial_matrix = help_Proposal.adjacent_matrix_initial(N, 'z')
     initial_connections = help_Proposal.matrix_connection(initial_matrix)
     initial_groups = help_Proposal.connections_groups(initial_connections)
@@ -21,10 +18,7 @@ def graphFDMVM(N, func, pop_size, Max_iter_overlap, Max_iter_search, epsilon, ov
     base_fitness = benchmark.base_fitness(Population, func, intercept)
 
     groups_fitness, cost = benchmark.groups_fitness(initial_groups, Population, func, cost, intercept)
-    delta = groups_fitness[0] - base_fitness[0]
-    while delta == 0:
-        delta = groups_fitness[random.randint(0, pop_size-1)] - base_fitness[random.randint(0, pop_size-1)]
-    current_best_obj = benchmark.object_function(base_fitness, groups_fitness, intercept)
+    current_best_obj = benchmark.object_function(base_fitness, groups_fitness)
     print('current best obj: ', current_best_obj)
 
     '''
@@ -32,11 +26,13 @@ def graphFDMVM(N, func, pop_size, Max_iter_overlap, Max_iter_search, epsilon, ov
     '''
     final_connection = help_Proposal.matrix_connection(initial_matrix)
     for i in range(Max_iter_search):
+
         print('iter: ', i+1, ' best obj: ', current_best_obj)
+        if current_best_obj < stop_threshold:
+            break
         initial_matrix, current_best_obj, cost = optimizer.local_search(current_best_obj, base_fitness, Population, func,
                                                                         initial_matrix, i, Max_iter_search,
-                                                                        Max_iter_overlap, overlap_ignore_rate, delta,
-                                                                        epsilon, cost, intercept)
+                                                                        Max_iter_overlap, overlap_ignore_rate, cost, intercept)
         final_connection = help_Proposal.matrix_connection(initial_matrix)
         # util.draw_heatmap(initial_matrix, "YlGnBu", 'initial solution')
     help_Proposal.draw_heatmap(initial_matrix, "YlGnBu", 'Best solution')

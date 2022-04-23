@@ -6,7 +6,7 @@ import numpy as np
 
 
 def local_search(current_best_obj, base_fitness, Population, func, matrix, current_iter, Max_iter_search,
-                 Max_iter_overlap, overlap_ignore_rate, delta, epsilon, cost, intercept):
+                 Max_iter_overlap, overlap_ignore_rate, cost, intercept):
 
     # set the neighbor size adaptive
     neighbor_size = define_neighbors(len(matrix), current_iter, Max_iter_search)
@@ -41,9 +41,9 @@ def local_search(current_best_obj, base_fitness, Population, func, matrix, curre
             continue
 
         overlap_cut_matrix_solution, update_obj, cost = overlap_solve(base_fitness, current_best_obj, center_var,
-                                                                      Population, func, matrix_solution, epsilon,
-                                                                      Max_iter_overlap, delta, overlap_ignore_rate,
-                                                                      cost, intercept)
+                                                                      Population, func, matrix_solution,
+                                                                      Max_iter_overlap, overlap_ignore_rate, cost,
+                                                                      intercept)
         overlap_cut_connection_solution = help_Proposal.matrix_connection(overlap_cut_matrix_solution)
         if update_obj < current_best_obj or (len(groups_solution) > len(overlap_cut_connection_solution) and update_obj
                                              == current_best_obj):
@@ -55,7 +55,7 @@ def local_search(current_best_obj, base_fitness, Population, func, matrix, curre
 
 
 # random cut the connection for the center variable in overlap function
-def overlap_solve(base_fitness, current_best_obj, center_var, Population, func, matrix, epsilon, iteration, delta, rate,
+def overlap_solve(base_fitness, current_best_obj, center_var, Population, func, matrix, iteration, rate,
                   cost, intercept):
     # overlap_connection save the double element pair
     # overlap_group save the merged element group
