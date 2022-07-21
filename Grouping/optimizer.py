@@ -6,25 +6,21 @@ import numpy as np
 
 
 def local_search(current_best_obj, base_fitness, Population, func, matrix, current_iter, Max_iter_search,
-                 Max_iter_overlap, overlap_ignore_rate, cost, intercept):
+                 overlap_ignore_rate, cost, intercept):
 
     # set the neighbor size adaptive
-    neighbor_size = define_neighbors(len(matrix), current_iter, Max_iter_search)
-
+    neighbor_size = define_neighbors(current_iter, Max_iter_search)
     # set the search points size adaptive
-    search_points_size = define_search_points(len(matrix), current_iter, Max_iter_search)
-
+    search_points_size = define_search_points(current_iter, Max_iter_search)
     # generate the search points and its neighbors
-    search_points, search_neighbors = search_point_neighbor_generate(matrix, neighbor_size, search_points_size)
+    search_paris = search_pairs_generate(matrix, neighbor_size, search_points_size)
     # generate the candidate solution
-
-    matrix_solution = solution_generate(matrix, search_points, search_neighbors)
+    matrix_solution = solution_generate(matrix, search_paris)
 
     # if current_iter % 5 == 0:
     #     help_Proposal.draw_heatmap(matrix_solution, "YlGnBu", 'Solution candidate in ' + str(current_iter + 1) + ' G')
 
     connections_solution = help_Proposal.matrix_connection(matrix_solution)
-
     groups_solution = help_Proposal.connections_groups(connections_solution)
 
     frequency = help_Proposal.calculate_frequency(matrix_solution)
@@ -33,25 +29,54 @@ def local_search(current_best_obj, base_fitness, Population, func, matrix, curre
     '''
     Solve overlap problems after new solution generate by LS
     '''
-    for center_var in center_vars:
-        # matrix is changed in every iteration
-        temp_frequency = help_Proposal.calculate_frequency(matrix_solution)
-        temp_center_vars = help_Proposal.overlap_center(temp_frequency)
-        if center_var not in temp_center_vars:
-            continue
+    overlap_cut_matrix_solution, update_obj, cost = easy_overlap_solve(center_vars, matrix_solution, base_fitness,
+                                                                       Population, func, cost, intercept,
+                                                                       overlap_ignore_rate)
+    overlap_cut_connection_solution = help_Proposal.matrix_connection(overlap_cut_matrix_solution)
+    if update_obj < current_best_obj or (len(groups_solution) > len(overlap_cut_connection_solution) and update_obj
+                                         == current_best_obj):
+        matrix = copy.deepcopy(overlap_cut_matrix_solution)
+        current_best_obj = update_obj
 
-        overlap_cut_matrix_solution, update_obj, cost = overlap_solve(base_fitness, current_best_obj, center_var,
-                                                                      Population, func, matrix_solution,
-                                                                      Max_iter_overlap, overlap_ignore_rate, cost,
-                                                                      intercept)
-        overlap_cut_connection_solution = help_Proposal.matrix_connection(overlap_cut_matrix_solution)
-        if update_obj < current_best_obj or (len(groups_solution) > len(overlap_cut_connection_solution) and update_obj
-                                             == current_best_obj):
-            matrix = copy.deepcopy(overlap_cut_matrix_solution)
-            current_best_obj = update_obj
-    if current_iter % 5 == 0:
-        help_Proposal.draw_heatmap(matrix, "YlGnBu", 'Current best solution in ' + str(current_iter + 1) + ' G')
+    # for center_var in center_vars:
+    #     # matrix is changed in every iteration
+    #     temp_frequency = help_Proposal.calculate_frequency(matrix_solution)
+    #     temp_center_vars = help_Proposal.overlap_center(temp_frequency)
+    #     if center_var not in temp_center_vars:
+    #         continue
+    #     overlap_cut_matrix_solution, update_obj, cost = overlap_solve(base_fitness, current_best_obj, center_var,
+    #                                                                   Population, func, matrix_solution,
+    #                                                                   Max_iter_overlap, overlap_ignore_rate, cost,
+    #                                                                   intercept)
+    #
+    #     overlap_cut_connection_solution = help_Proposal.matrix_connection(overlap_cut_matrix_solution)
+    #     if update_obj < current_best_obj or (len(groups_solution) > len(overlap_cut_connection_solution) and
+    #                                                           update_obj  == current_best_obj):
+    #         matrix = copy.deepcopy(overlap_cut_matrix_solution)
+    #         current_best_obj = update_obj
+
     return matrix, current_best_obj, cost
+
+
+# Just random cut the overlap
+def easy_overlap_solve(center_vars, matrix_solution, base_fitness, Population, func, cost, intercept, ignore_rate):
+    overlap_cut_matrix_solution = copy.deepcopy(matrix_solution)
+    overlap_connections = []
+    for center_var in center_vars:
+        for i in range(len(matrix_solution[center_var])):
+            if matrix_solution[center_var][i] == 1:
+                overlap_connections.append([center_var, i])
+    random_selection = np.random.rand(len(overlap_connections))
+    for i in range(len(random_selection)):
+        if random_selection[i] < ignore_rate:
+            overlap_cut_matrix_solution[overlap_connections[i][0]][overlap_connections[i][1]] = 0
+            overlap_cut_matrix_solution[overlap_connections[i][1]][overlap_connections[i][0]] = 0
+
+    overlap_cut_connection = help_Proposal.matrix_connection(overlap_cut_matrix_solution)
+    overlap_cut_groups = help_Proposal.connections_groups(overlap_cut_connection)
+    update_fitness, cost = benchmark.groups_fitness(overlap_cut_groups, Population, func, cost, intercept)
+    update_obj = benchmark.object_function(base_fitness, update_fitness)
+    return overlap_cut_matrix_solution, update_obj, cost
 
 
 # random cut the connection for the center variable in overlap function
@@ -95,45 +120,38 @@ def overlap_solve(base_fitness, current_best_obj, center_var, Population, func, 
     return matrix_copy, current_best_obj, cost
 
 
-def define_neighbors(N, cur_iter, Max_iter):
-    return int(-N / (50 * Max_iter) * (cur_iter + 1) + N / 50) + 1
-    # return int((N/5)*(1 - 1 / (1 + np.exp(-0.5 * (cur_iter - Max_iter / 3))))+1)
+# (0, 10) and (max, 2)
+def define_neighbors(cur_iter, Max_iter):
+    return int(-8/Max_iter * cur_iter + 10)
 
 
-def define_search_points(N, cur_iter, Max_iter):
-    return int(-N / (50 * Max_iter) * (cur_iter + 1) + N / 50) + 1
-    # return int((N/5)*(1 - 1 / (1 + np.exp(-0.5 * (cur_iter - Max_iter / 3))))+1)
+def define_search_points(cur_iter, Max_iter):
+    return int(-8/Max_iter * cur_iter + 10)
 
 
 # Generate the search points and neighbors for LS
-def search_point_neighbor_generate(matrix, search_size, neighbor_size):
+def search_pairs_generate(matrix, search_size, neighbor_size):
     N = len(matrix)
-    search_points = []
-    while len(search_points) < search_size:
-        point = random.randint(0, N - 1)
-        if point not in search_points:
-            search_points.append(point)
-    search_neighbors = []
-    for i in range(search_size):
-        point_neighbors = []
-        while len(point_neighbors) < neighbor_size:
-            candidate_neighbor = random.randint(0, N - 1)
-            if candidate_neighbor != search_points[i] and candidate_neighbor not in point_neighbors:
-                point_neighbors.append(candidate_neighbor)
-        search_neighbors.append(point_neighbors)
-    return search_points, search_neighbors
+    search_pairs = []
+    for i in range(search_size * neighbor_size):
+        e1 = np.random.randint(0, N-1)
+        e2 = np.random.randint(0, N-1)
+        while [e1, e2] in search_pairs or [e2, e1] in search_pairs:
+            e1 = np.random.randint(0, N - 1)
+            e2 = np.random.randint(0, N - 1)
+        search_pairs.append([e1, e2])
+    return search_pairs
 
 
-def solution_generate(matrix, points, neighbors):
+def solution_generate(matrix, search_pairs):
     matrix_copy = copy.copy(matrix)
-    for i in range(len(points)):
-        for neighbor in neighbors[i]:
-            if matrix_copy[neighbor][points[i]] == 1:
-                matrix_copy[neighbor][points[i]] = 0
-                matrix_copy[points[i]][neighbor] = 0
-            else:
-                matrix_copy[neighbor][points[i]] = 1
-                matrix_copy[points[i]][neighbor] = 1
+    for pair in search_pairs:
+        if matrix_copy[pair[0]][pair[1]] == 0:
+            matrix_copy[pair[0]][pair[1]] = 1
+            matrix_copy[pair[1]][pair[0]] = 1
+        else:
+            matrix_copy[pair[0]][pair[1]] = 0
+            matrix_copy[pair[0]][pair[1]] = 0
     return matrix_copy
 
 

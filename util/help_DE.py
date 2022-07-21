@@ -18,3 +18,5 @@ def initial_population(Dim, NIND, func, groups, scale_range):
         problem.aimFunc(population)
         initial_Population.append(population)
     return initial_Population
+
+

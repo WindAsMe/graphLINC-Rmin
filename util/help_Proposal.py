@@ -5,8 +5,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
+
 def random_Population(scale_range, N, size):
-    Population = np.zeros((size, N))
+    Population = np.zeros((size, N), dtype='double')
     for individual in Population:
         for i in range(len(individual)):
             individual[i] = random.uniform(scale_range[0], scale_range[1])
@@ -21,7 +22,7 @@ def adjacent_matrix_initial(N, choice):
             matrix[i][i+1] = 1
             matrix[i+1][i] = 1
     elif choice == 'r':
-        dense = 0.02
+        dense = 0.01
         for i in range(0, N):
             for j in range(0, i):
                 if np.random.rand() < dense:
@@ -74,7 +75,6 @@ def connections_groups(connections):
                     new_connection.extend(group)
                     element_list.extend(group)
         merged_groups.append(list(set(new_connection)))
-
     return merged_groups
 
 

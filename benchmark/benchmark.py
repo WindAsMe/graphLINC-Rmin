@@ -32,5 +32,6 @@ def object_function(base_fitness, opt_fitness):
     error = 0
     for i in range(len(base_fitness)):
         error += ((base_fitness[i] - opt_fitness[i])) ** 2
+        print(error)
     return error
 

@@ -1,5 +1,5 @@
 import numpy as np
-
+from cec2013lsgo.cec2013 import Benchmark
 
 def CCDE(N):
     groups = []
@@ -8,25 +8,37 @@ def CCDE(N):
     return groups
 
 
-def DECC_DG(func, N):
-    intercept = func([0] * N)
-    DG_matrix = np.zeros((N, N))
-    for i in range(N):
-        index_i = [0] * N
-        index_i[i] = 0.1
-        delta_i = func(index_i) - intercept
+def DECC_DG(func_num, N):
+    cost = 2
+    bench = Benchmark()
+    function = bench.get_function(func_num)
+    groups = CCDE(N)
+    intercept = function(np.zeros((1, N))[0])
 
-        for j in range(i+1, N):
-            index_j = [0] * N
-            index_ij = [0] * N
-            index_j[j] = 0.1
-            index_ij[i] = 0.1
-            index_ij[j] = 0.1
+    for i in range(len(groups)-1):
+        if i < len(groups) - 1:
+            cost += 2
+            index1 = np.zeros((1, N))[0]
+            index1[groups[i][0]] = 1
+            delta1 = function(index1) - intercept
 
-            delta_j = func(index_j) - intercept
-            delta_ij = func(index_ij) - intercept
+            for j in range(i+1, len(groups)):
+                cost += 2
+                if i < len(groups)-1 and j < len(groups) and not DG_Differential(groups[i][0], groups[j][0], delta1, function, intercept):
+                    groups[i].extend(groups.pop(j))
+                    j -= 1
 
-            if np.abs(delta_ij - (delta_i + delta_j)) > 0.001:
-                DG_matrix[i][j] = 1
-                DG_matrix[j][i] = 1
-    return DG_matrix
+    return groups, cost
+
+
+def DG_Differential(e1, e2, a, function, intercept):
+    index1 = np.zeros(1000)
+    index2 = np.zeros(1000)
+    index1[e2] = 1
+    index2[e1] = 1
+    index2[e2] = 1
+
+    b = function(index1) - intercept
+    c = function(index2) - intercept
+
+    return np.abs(c - (a + b)) < 0.001

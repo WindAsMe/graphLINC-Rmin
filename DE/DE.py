@@ -19,7 +19,6 @@ def CC(Dim, NIND, MAX_iteration, func, scale_range, groups):
             for element in groups[i]:
                 var_traces[real_iteration][element] = var_trace[0][groups[i].index(element)]
                 based_population[element] = var_trace[0][groups[i].index(element)]
-
         real_iteration += 1
 
     obj_traces = []
